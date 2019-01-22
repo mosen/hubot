@@ -1,8 +1,8 @@
 'use strict'
+import {EventEmitter} from "events";
+import {Robot} from "./robot";
+import {User} from "./user";
 
-const EventEmitter = require('events').EventEmitter
-
-const User = require('./user')
 
 // If necessary, reconstructs a User object. Returns either:
 //
@@ -10,7 +10,7 @@ const User = require('./user')
 // 2. If the original object was a User object, the original object
 // 3. If the original object was a plain JavaScript object, return
 //    a User object with all of the original object's properties.
-let reconstructUserIfNecessary = function (user) {
+let reconstructUserIfNecessary = function (user: any) {
   if (!user) {
     return null
   }
@@ -24,20 +24,29 @@ let reconstructUserIfNecessary = function (user) {
   } else {
     return user
   }
-}
+};
 
-class Brain extends EventEmitter {
+export class Brain extends EventEmitter {
+
+  private data: {
+    users: any;
+    _private: any;
+  };
+
+  private autoSave: boolean;
+  private saveInterval: NodeJS.Timeout;
+
   // Represents somewhat persistent storage for the robot. Extend this.
   //
   // Returns a new Brain with no external storage.
-  constructor (robot) {
-    super()
+  constructor (robot: Robot) {
+    super();
     this.data = {
       users: {},
       _private: {}
-    }
+    };
 
-    this.autoSave = true
+    this.autoSave = true;
 
     robot.on('running', () => {
       this.resetSaveInterval(5)
@@ -48,20 +57,20 @@ class Brain extends EventEmitter {
   // existing @data before emitting the 'loaded' event.
   //
   // Returns the instance for chaining.
-  set (key, value) {
-    let pair
+  public set (key: PropertyKey, value: any) {
+    let pair: any;
     if (key === Object(key)) {
-      pair = key
+      pair = key;
     } else {
-      pair = {}
-      pair[key] = value
+      pair = {};
+      pair[key] = value;
     }
 
-    Object.keys(pair).forEach((key) => {
+    Object.keys(pair).forEach((key: PropertyKey) => {
       this.data._private[key] = pair[key]
-    })
+    });
 
-    this.emit('loaded', this.data)
+    this.emit('loaded', this.data);
 
     return this
   }
@@ -70,7 +79,7 @@ class Brain extends EventEmitter {
   // or return null if not found.
   //
   // Returns the value.
-  get (key) {
+  public get (key: PropertyKey) {
     return this.data._private[key] != null ? this.data._private[key] : null
   }
 
@@ -78,7 +87,7 @@ class Brain extends EventEmitter {
   // if it exists
   //
   // Returns the instance for chaining.
-  remove (key) {
+  public remove (key: PropertyKey): Brain {
     if (this.data._private[key] != null) {
       delete this.data._private[key]
     }
@@ -90,16 +99,16 @@ class Brain extends EventEmitter {
   // persisting.
   //
   // Returns nothing.
-  save () {
+  public save () {
     this.emit('save', this.data)
   }
 
   // Public: Emits the 'close' event so that 'brain' scripts can handle closing.
   //
   // Returns nothing.
-  close () {
-    clearInterval(this.saveInterval)
-    this.save()
+  public close () {
+    clearInterval(this.saveInterval);
+    this.save();
     this.emit('close')
   }
 
@@ -108,7 +117,7 @@ class Brain extends EventEmitter {
   // enabled - A boolean whether to autosave or not
   //
   // Returns nothing
-  setAutoSave (enabled) {
+  public setAutoSave (enabled: boolean) {
     this.autoSave = enabled
   }
 
@@ -117,7 +126,7 @@ class Brain extends EventEmitter {
   // seconds - An Integer of seconds between saves.
   //
   // Returns nothing.
-  resetSaveInterval (seconds) {
+  public resetSaveInterval (seconds: number) {
     if (this.saveInterval) {
       clearInterval(this.saveInterval)
     }
@@ -133,7 +142,7 @@ class Brain extends EventEmitter {
   // Returns nothing.
   //
   // Caveats: Deeply nested structures don't merge well.
-  mergeData (data) {
+  public mergeData (data: any) {
     for (let k in data || {}) {
       this.data[k] = data[k]
     }
@@ -141,34 +150,34 @@ class Brain extends EventEmitter {
     // Ensure users in the brain are still User objects.
     if (data && data.users) {
       for (let k in data.users) {
-        let user = this.data.users[k]
+        let user = this.data.users[k];
         this.data.users[k] = reconstructUserIfNecessary(user)
       }
     }
 
-    this.emit('loaded', this.data)
+    this.emit('loaded', this.data);
   }
 
   // Public: Get an Array of User objects stored in the brain.
   //
   // Returns an Array of User objects.
-  users () {
+  public users (): User[] {
     return this.data.users
   }
 
   // Public: Get a User object given a unique identifier.
   //
   // Returns a User instance of the specified user.
-  userForId (id, options) {
-    let user = this.data.users[id]
+  public userForId (id, options): User {
+    let user = this.data.users[id];
 
     if (!user) {
-      user = new User(id, options)
+      user = new User(id, options);
       this.data.users[id] = user
     }
 
     if (options && options.room && (!user.room || user.room !== options.room)) {
-      user = new User(id, options)
+      user = new User(id, options);
       this.data.users[id] = user
     }
 
@@ -178,7 +187,7 @@ class Brain extends EventEmitter {
   // Public: Get a User object given a name.
   //
   // Returns a User instance for the user with the specified name.
-  userForName (name) {
+  public userForName (name: string): User {
     let result = null
     const lowerName = name.toLowerCase()
 
@@ -197,13 +206,13 @@ class Brain extends EventEmitter {
   // nicknames, etc.
   //
   // Returns an Array of User instances matching the fuzzy name.
-  usersForRawFuzzyName (fuzzyName) {
-    const lowerFuzzyName = fuzzyName.toLowerCase()
+  public usersForRawFuzzyName (fuzzyName: string): User[] {
+    const lowerFuzzyName = fuzzyName.toLowerCase();
 
-    const users = this.data.users || {}
+    const users = this.data.users || {};
 
     return Object.keys(users).reduce((result, key) => {
-      const user = users[key]
+      const user = users[key];
       if (user.name.toLowerCase().lastIndexOf(lowerFuzzyName, 0) === 0) {
         result.push(user)
       }
@@ -216,13 +225,12 @@ class Brain extends EventEmitter {
   // fuzzyName is a raw fuzzy match (see usersForRawFuzzyName).
   //
   // Returns an Array of User instances matching the fuzzy name.
-  usersForFuzzyName (fuzzyName) {
-    const matchedUsers = this.usersForRawFuzzyName(fuzzyName)
-    const lowerFuzzyName = fuzzyName.toLowerCase()
-    const fuzzyMatchedUsers = matchedUsers.filter(user => user.name.toLowerCase() === lowerFuzzyName)
+  public usersForFuzzyName (fuzzyName: string) {
+    const matchedUsers = this.usersForRawFuzzyName(fuzzyName);
+    const lowerFuzzyName = fuzzyName.toLowerCase();
+    const fuzzyMatchedUsers = matchedUsers.filter(user => user.name.toLowerCase() === lowerFuzzyName);
 
     return fuzzyMatchedUsers.length > 0 ? fuzzyMatchedUsers : matchedUsers
   }
 }
 
-module.exports = Brain

@@ -1,11 +1,24 @@
-'use strict'
+import {Robot} from "./robot";
 
 const async = require('async')
 
-class Middleware {
-  constructor (robot) {
-    this.robot = robot
-    this.stack = []
+export type DoneFunc = () => void;
+export type NextFunc = (context: IContext, done: DoneFunc) => any;
+
+export interface IContext {
+  response: any;
+}
+
+export type MiddlewareFunc = (context: IContext, next: NextFunc, done: DoneFunc) => void;
+
+export class Middleware {
+
+  private robot: Robot;
+  private stack: Array<MiddlewareFunc>;
+
+  constructor (robot: Robot) {
+    this.robot = robot;
+    this.stack = [];
   }
 
   // Public: Execute all middleware in order and call 'next' with the latest
@@ -24,19 +37,15 @@ class Middleware {
   //
   // Returns nothing
   // Returns before executing any middleware
-  execute (context, next, done) {
-    const self = this
-
-    if (done == null) {
-      done = function () {}
-    }
+  public execute (context: IContext, next: NextFunc, done: () => void = () => {}) {
+    const self = this;
 
     // Execute a single piece of middleware and update the completion callback
     // (each piece of middleware can wrap the 'done' callback with additional
     // logic).
-    function executeSingleMiddleware (doneFunc, middlewareFunc, cb) {
+    function executeSingleMiddleware (doneFunc: DoneFunc, middlewareFunc: MiddlewareFunc, cb) {
       // Match the async.reduce interface
-      function nextFunc (newDoneFunc) {
+      function nextFunc (newDoneFunc: DoneFunc) {
         cb(null, newDoneFunc || doneFunc)
       }
 
@@ -45,14 +54,14 @@ class Middleware {
         middlewareFunc(context, nextFunc, doneFunc)
       } catch (err) {
         // Maintaining the existing error interface (Response object)
-        self.robot.emit('error', err, context.response)
+        self.robot.emit('error', err, context.response);
         // Forcibly fail the middleware and stop executing deeper
         doneFunc()
       }
     }
 
     // Executed when the middleware stack is finished
-    function allDone (_, finalDoneFunc) {
+    function allDone (_, finalDoneFunc: DoneFunc) {
       next(context, finalDoneFunc)
     }
 
@@ -75,12 +84,10 @@ class Middleware {
   //              executed.
   //
   // Returns nothing.
-  register (middleware) {
+  register (middleware: MiddlewareFunc) {
     if (middleware.length !== 3) {
       throw new Error(`Incorrect number of arguments for middleware callback (expected 3, got ${middleware.length})`)
     }
     this.stack.push(middleware)
   }
 }
-
-module.exports = Middleware

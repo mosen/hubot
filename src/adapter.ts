@@ -2,6 +2,18 @@
 
 const EventEmitter = require('events').EventEmitter
 
+
+export interface IAdapter {
+  send: (envelope: any) => void;
+  emote: (envelope: any) => void;
+  reply: (envelope: any) => void;
+  topic: (envelope: any) => void;
+  play: (envelope: any) => void;
+  run: () => void;
+  close: () => void;
+  receive: (message: any) => void;
+}
+
 class Adapter extends EventEmitter {
   // An adapter is a specific interface to a chat source for robots.
   //

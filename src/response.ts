@@ -1,6 +1,24 @@
-'use strict'
+import {Message} from "./message";
+import {Robot} from "./robot";
+import {User} from "./user";
 
-class Response {
+export interface IEnvelope {
+  room: string;
+  user: User;
+  message: Message;
+}
+
+export class Response {
+
+  private robot: Robot;
+  private message: Message;
+  private match: RegExpMatchArray | null;
+  private envelope: {
+    room: string;
+    user: User;
+    message: Message;
+  };
+
   // Public: Responses are sent to matching listeners. Messages know about the
   // content and user that made the original message, and how to reply back to
   // them.
@@ -8,10 +26,10 @@ class Response {
   // robot   - A Robot instance.
   // message - A Message instance.
   // match   - A Match object from the successful Regex match.
-  constructor (robot, message, match) {
-    this.robot = robot
-    this.message = message
-    this.match = match
+  constructor (robot: Robot, message: Message, match: RegExpMatchArray | null) {
+    this.robot = robot;
+    this.message = message;
+    this.match = match;
     this.envelope = {
       room: this.message.room,
       user: this.message.user,
@@ -25,8 +43,8 @@ class Response {
   //           should be kept intact.
   //
   // Returns nothing.
-  send (/* ...strings */) {
-    const strings = [].slice.call(arguments)
+  public send (/* ...strings */) {
+    const strings = [].slice.call(arguments);
     this.runWithMiddleware.apply(this, ['send', { plaintext: true }].concat(strings))
   }
 
@@ -36,8 +54,8 @@ class Response {
   //           should be kept intact.
   //
   // Returns nothing.
-  emote (/* ...strings */) {
-    const strings = [].slice.call(arguments)
+  public emote (/* ...strings */) {
+    const strings = [].slice.call(arguments);
     this.runWithMiddleware.apply(this, ['emote', { plaintext: true }].concat(strings))
   }
 
@@ -47,8 +65,8 @@ class Response {
   //           should be kept intact.
   //
   // Returns nothing.
-  reply (/* ...strings */) {
-    const strings = [].slice.call(arguments)
+  public reply (/* ...strings */) {
+    const strings = [].slice.call(arguments);
     this.runWithMiddleware.apply(this, ['reply', { plaintext: true }].concat(strings))
   }
 
@@ -58,8 +76,8 @@ class Response {
   //           room the bot is in.
   //
   // Returns nothing.
-  topic (/* ...strings */) {
-    const strings = [].slice.call(arguments)
+  public topic (/* ...strings */) {
+    const strings = [].slice.call(arguments);
     this.runWithMiddleware.apply(this, ['topic', { plaintext: true }].concat(strings))
   }
 
@@ -69,8 +87,8 @@ class Response {
   //           these strings should be kept intact.
   //
   // Returns nothing
-  play (/* ...strings */) {
-    const strings = [].slice.call(arguments)
+  public play (/* ...strings */) {
+    const strings = [].slice.call(arguments);
     this.runWithMiddleware.apply(this, ['play'].concat(strings))
   }
 
@@ -80,14 +98,14 @@ class Response {
   //           should be kept intact.
   //
   // Returns nothing
-  locked (/* ...strings */) {
-    const strings = [].slice.call(arguments)
+  public locked (/* ...strings */) {
+    const strings = [].slice.call(arguments);
     this.runWithMiddleware.apply(this, ['locked', { plaintext: true }].concat(strings))
   }
 
   // Private: Call with a method for the given strings using response
   // middleware.
-  runWithMiddleware (methodName, opts/* , ...strings */) {
+  private runWithMiddleware (methodName, opts/* , ...strings */) {
     const self = this
     const strings = [].slice.call(arguments, 2)
     const copy = strings.slice(0)
@@ -125,14 +143,14 @@ class Response {
   // items - An Array of items.
   //
   // Returns a random item.
-  random (items) {
+  public random<T>(items: Array<T>): T {
     return items[Math.floor(Math.random() * items.length)]
   }
 
   // Public: Tell the message to stop dispatching to listeners
   //
   // Returns nothing.
-  finish () {
+  public finish () {
     this.message.finish()
   }
 
@@ -142,9 +160,7 @@ class Response {
   // send the request.
   //
   // Returns a ScopedClient instance.
-  http (url, options) {
+  public http (url: string, options: any) {
     return this.robot.http(url, options)
   }
 }
-
-module.exports = Response
